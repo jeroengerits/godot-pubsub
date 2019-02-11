@@ -1,9 +1,8 @@
 tool
 extends Node
 
-# Todo: make unsubscribe method
+# Todo: tests unsubscribe method
 # Todo: make constants configurable 
-# Todo: Rename github repo, it has a typo
 
 const IS_THREAD_LOCKING_ENABLED = true
 const IS_CONSOLE_DEBUGGING_ENABLED = true
@@ -17,6 +16,7 @@ const ERROR_INVALID_CALLBACK_NAME = "PUBSUB:ERROR, Invalid Callback name"
 
 var _publish_thread : Mutex
 var _subscribe_thread : Mutex
+var _unsubscribe_thread : Mutex
 var _subscriptions : Array = Array()
 
 
@@ -25,10 +25,11 @@ signal subscribing(subscription)
 signal subscribed(subscription)
 signal publishing(message)
 signal published(message)
-
+signal unsubscribing(subscription)
+signal unsubscribed(subscription)
 
 func _ready() -> void:
-
+	
 	if IS_THREAD_LOCKING_ENABLED:
 		_subscribe_thread = Mutex.new()
 		_publish_thread = Mutex.new()
@@ -54,6 +55,25 @@ func subscribe(topic : String, subscriber : Object, callback: String = "", is_de
 	if IS_EMITTING_SIGNALS_ENABLED:
 		emit_signal("subscribed", subscription)
 
+
+func unsubscribe(topic : String, subscriber : Object, callback: String = "", is_deferred : bool = true):
+
+	var subscription = Subscription.from_native(topic, subscriber, callback, is_deferred)
+	
+	if IS_EMITTING_SIGNALS_ENABLED:
+		emit_signal("unsubscribing", subscription)
+
+	if IS_THREAD_LOCKING_ENABLED:
+		_unsubscribe_thread.lock()
+		_remove_subscribtion(subscription)
+		_unsubscribe_thread.unlock()
+	else: 
+		_remove_subscribtion(subscription)
+		
+	if IS_EMITTING_SIGNALS_ENABLED:
+		emit_signal("unsubscribed", subscription)
+		
+		
 func publish(topic:String, payload:Dictionary = Dictionary()) -> void:
 
 	var message = Message.new(Topic.from_string(topic), payload)
@@ -63,13 +83,13 @@ func publish(topic:String, payload:Dictionary = Dictionary()) -> void:
 
 	if IS_THREAD_LOCKING_ENABLED: 
 		_publish_thread.lock()
-		_send_to_subscribers(message)
+		_publish_to_subscribers(message)
 		_publish_thread.unlock()
 	else:
-		_send_to_subscribers(message)
+		_publish_to_subscribers(message)
 
 
-func _send_to_subscribers(message : Message) -> void:
+func _publish_to_subscribers(message : Message) -> void:
 	
 	for subscription in _subscriptions:
 
@@ -86,6 +106,10 @@ func _send_to_subscribers(message : Message) -> void:
 			if IS_EMITTING_SIGNALS_ENABLED:
 				emit_signal("published", message)
 
+func _remove_subscribtion(subscription : Subscription) -> void:
+	for s in _subscriptions:
+			if s.is_equal(subscription):
+				_subscriptions.erase(s)
 
 class Message:
 
@@ -98,9 +122,6 @@ class Message:
 
 	func topic() -> Topic:
 		return _topic
-
-	func payload() -> Dictionary:
-		return _payload
 
 	func to_dict() -> Dictionary:
 		return {
@@ -140,7 +161,13 @@ class Subscription:
 
 	func is_deferred() -> bool:
 		return _is_deferred
+	
+	func is_equal(other : Subscription) -> bool:
+		if _topic.is_equal(other.topic()) and _subscriber.is_equal(other.subscriber()) and _callback.is_equal(other.callback()) and _is_deferred == other.is_deferred():
+			return true
 
+		return false
+		
 	func to_dict() -> Dictionary:
 		return {
 			"topic": _topic.to_string(),
@@ -156,6 +183,7 @@ class Subscription:
 			Callback.from_string(callback), 
 			is_deferred
 		)
+
 
 class Topic:
 

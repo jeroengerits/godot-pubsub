@@ -47,6 +47,7 @@ func _custom_callback(message) -> void:
 	print("_custom_callback" + str(message))
 
 class CustomSubscriber:
+
 	func _on_yet_another_test_message(message) -> void:
 		print("_on_yet_another_test_message" + str(message))
 	
