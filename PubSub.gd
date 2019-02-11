@@ -2,7 +2,7 @@ tool
 extends Node
 
 # Todo: tests unsubscribe method
-# Todo: make constants configurable 
+# Todo: make constants configurable
 
 const IS_THREAD_LOCKING_ENABLED = true
 const IS_CONSOLE_DEBUGGING_ENABLED = true
@@ -29,7 +29,7 @@ signal unsubscribing(subscription)
 signal unsubscribed(subscription)
 
 func _ready() -> void:
-	
+
 	if IS_THREAD_LOCKING_ENABLED:
 		_subscribe_thread = Mutex.new()
 		_publish_thread = Mutex.new()
@@ -49,7 +49,7 @@ func subscribe(topic : String, subscriber : Object, callback: String = "", is_de
 		_subscribe_thread.lock()
 		_subscriptions.append(subscription)
 		_subscribe_thread.unlock()
-	else: 
+	else:
 		_subscriptions.append(subscription)
 
 	if IS_EMITTING_SIGNALS_ENABLED:
@@ -59,7 +59,7 @@ func subscribe(topic : String, subscriber : Object, callback: String = "", is_de
 func unsubscribe(topic : String, subscriber : Object, callback: String = "", is_deferred : bool = true):
 
 	var subscription = Subscription.from_native(topic, subscriber, callback, is_deferred)
-	
+
 	if IS_EMITTING_SIGNALS_ENABLED:
 		emit_signal("unsubscribing", subscription)
 
@@ -67,13 +67,13 @@ func unsubscribe(topic : String, subscriber : Object, callback: String = "", is_
 		_unsubscribe_thread.lock()
 		_remove_subscribtion(subscription)
 		_unsubscribe_thread.unlock()
-	else: 
+	else:
 		_remove_subscribtion(subscription)
-		
+
 	if IS_EMITTING_SIGNALS_ENABLED:
 		emit_signal("unsubscribed", subscription)
-		
-		
+
+
 func publish(topic:String, payload:Dictionary = Dictionary()) -> void:
 
 	var message = Message.new(Topic.from_string(topic), payload)
@@ -81,7 +81,7 @@ func publish(topic:String, payload:Dictionary = Dictionary()) -> void:
 	if IS_EMITTING_SIGNALS_ENABLED:
 		emit_signal("publishing", message)
 
-	if IS_THREAD_LOCKING_ENABLED: 
+	if IS_THREAD_LOCKING_ENABLED:
 		_publish_thread.lock()
 		_publish_to_subscribers(message)
 		_publish_thread.unlock()
@@ -90,7 +90,7 @@ func publish(topic:String, payload:Dictionary = Dictionary()) -> void:
 
 
 func _publish_to_subscribers(message : Message) -> void:
-	
+
 	for subscription in _subscriptions:
 
 		var subscriber = subscription.subscriber()
@@ -114,7 +114,7 @@ func _remove_subscribtion(subscription : Subscription) -> void:
 class Message:
 
 	var _topic : Topic
-	var _payload : Dictionary	
+	var _payload : Dictionary
 
 	func _init(topic : Topic, payload : Dictionary) -> void:
 		_topic = topic
@@ -138,13 +138,13 @@ class Subscription:
 	var _is_deferred : bool
 
 	func _init(topic : Topic, subscriber : Subscriber, callback : Callback, is_deferred : bool) -> void:
-		
+
 		if callback.is_empty():
 			callback = Callback.from_string("_on_" + topic.to_string())
-		
+
 		if not subscriber.can_handle(callback) and IS_CONSOLE_DEBUGGING_ENABLED:
 			printerr(ERROR_MISSING_CALLBACK + " Callback: " + callback.to_string())
-	
+
 		_topic = topic
 		_subscriber = subscriber
 		_callback = callback
@@ -161,13 +161,13 @@ class Subscription:
 
 	func is_deferred() -> bool:
 		return _is_deferred
-	
+
 	func is_equal(other : Subscription) -> bool:
 		if _topic.is_equal(other.topic()) and _subscriber.is_equal(other.subscriber()) and _callback.is_equal(other.callback()) and _is_deferred == other.is_deferred():
 			return true
 
 		return false
-		
+
 	func to_dict() -> Dictionary:
 		return {
 			"topic": _topic.to_string(),
@@ -175,12 +175,12 @@ class Subscription:
 			"callback": _callback.to_string(),
 			"is_deferred": _is_deferred
 		}
-	
+
 	static func from_native(topic : String, subscriber : Object, callback : String = "", is_deferred : bool = true) -> Subscription:
 		return Subscription.new(
-			Topic.from_string(topic), 
+			Topic.from_string(topic),
 			Subscriber.from_native(subscriber),
-			Callback.from_string(callback), 
+			Callback.from_string(callback),
 			is_deferred
 		)
 
@@ -222,7 +222,7 @@ class Callback:
 
 	func is_equal(other : Callback) -> bool:
 		return to_string() == other.to_string()
-	
+
 	func is_empty() -> bool:
 		return _callback.length() == 0
 
@@ -231,18 +231,18 @@ class Callback:
 
 
 class Subscriber:
-	
+
 	var _instance : Object
-	
+
 	func _init(subscriber : Object) -> void:
 		_instance = subscriber
-	
+
 	func can_handle(callback : Callback) -> bool:
 		return _instance.has_method(callback.to_string())
-		
+
 	func handle_deferred(callback : Callback, message : Message) -> void:
 		_instance.call_deferred(callback.to_string(), message.to_dict())
-	
+
 	func handle(callback: Callback, message : Message) -> void:
 		_instance.call(callback.to_string(), message.to_dict())
 
