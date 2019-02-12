@@ -17,11 +17,11 @@ _global_script_class_icons={
 
 config/name="Messenger"
 run/main_scene="res://Example.tscn"
-config/icon="res://icon.png"
+config/icon="res://addons/PubSub/icon.png"
 
 [autoload]
 
-PubSub="*res://PubSub.gd"
+PubSub="*res://addons/PubSub/PubSub.gd"
 
 [editor_plugins]
 

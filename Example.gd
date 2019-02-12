@@ -26,7 +26,11 @@ func _ready() -> void:
 	
 	# Custom subscriber and handler, will call '_on_yet_another_test_message' CustomSubscriber
 	PubSub.subscribe("last_test_message", CustomSubscriber.new(), "_another_custom_callback")
+
+	# Subscribe to all messages on custom callback
+	PubSub.subscribe("*", self, "_wildcard_callback")
 	
+	PubSub.subscribe("*", self, "_wildcard_callback")
 	
 	# PUBLISH MESSAGES
 	# ========================================================================
@@ -45,6 +49,10 @@ func _on_test_message(message) -> void:
 
 func _custom_callback(message) -> void:
 	print("_custom_callback" + str(message))
+
+func _wildcard_callback(message) -> void:
+	print("_wildcard_callback" + str(message))
+	
 
 class CustomSubscriber:
 
