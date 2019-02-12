@@ -21,8 +21,8 @@ config/icon="res://addons/PubSub/icon.png"
 
 [autoload]
 
-PubSub="*res://addons/PubSub/PubSub.gd"
+PubSub="*res://PubSub.gd"
 
 [editor_plugins]
 
-enabled=PoolStringArray( "PubSub" )
+enabled=PoolStringArray( "PubSub", "PubSubDock" )

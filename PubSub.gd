@@ -1,8 +1,6 @@
 extends Node
 
 # todo tests unsubscribe method
-# ? make a dock plugin for pubsub that outputs all events?
-# ? Add a namespace to messages (subscribe("users.*"))
 # ? Read configuration from the plugin .cfg file instead of using constants
 
 const IS_THREAD_LOCKING_ENABLED = true
