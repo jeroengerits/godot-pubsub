@@ -28,6 +28,7 @@ signal published(message)
 signal unsubscribing(subscription)
 signal unsubscribed(subscription)
 
+
 func _ready() -> void:
 
     if IS_THREAD_LOCKING_ENABLED:
@@ -96,7 +97,7 @@ func _publish_to_subscribers(message : Message) -> void:
         var subscriber = subscription.subscriber()
         var callback = subscription.callback()
 
-        if subscription.is_wildcard() and callback.is_empty():
+        if subscription.topic().is_wildcard() and callback.is_empty():
 
             if IS_CONSOLE_DEBUGGING_ENABLED:
                 printerr(ERROR_WILDCARD_CANNOT_HAVE_AUTO_HANDLER + " Topic: " + subscription.topic().to_string())
@@ -144,17 +145,17 @@ class Subscription:
     var _topic : Topic
     var _subscriber : Subscriber
     var _callback : Callback
-    var _is_deferred : bool
+    var _is_deferred : boo  l
 
     func _init(topic : Topic, subscriber : Subscriber, callback : Callback, is_deferred : bool) -> void:
-
-        if callback.is_empty():
-            callback = Callback.from_string("_on_" + topic.to_string())
 
         if topic.is_empty():
             if IS_CONSOLE_DEBUGGING_ENABLED:
                 printerr(ERROR_INVALID_TOPIC_NAME + " Topic: " + topic.to_string())
             return
+
+        if callback.is_empty():
+            callback = Callback.from_topic(topic)
 
         if not subscriber.can_handle(callback) and IS_CONSOLE_DEBUGGING_ENABLED:
             printerr(ERROR_MISSING_CALLBACK + " Callback: " + callback.to_string())
@@ -182,9 +183,6 @@ class Subscription:
 
         return false
 
-    func is_wildcard() -> bool:
-        return _topic.to_string()  == WILDCARD_SYMBOL
-
     func to_dict() -> Dictionary:
         return {
             "topic": _topic.to_string(),
@@ -207,7 +205,7 @@ class Topic:
     var _topic : String
 
     func _init(topic : String) -> void:
-        if not topic.is_valid_identifier() and topic != WILDCARD_SYMBOL:
+        if not is_valid(topic):
             if IS_CONSOLE_DEBUGGING_ENABLED:
                 printerr(ERROR_INVALID_TOPIC_NAME + " Topic: " + topic)
             return
@@ -222,6 +220,12 @@ class Topic:
     func is_empty() -> bool:
         return _topic.length() == 0
 
+    func is_valid(topic : Topic) -> bool:
+        return topic.is_valid_identifier() and topic != WILDCARD_SYMBOL
+
+    func is_wildcard() -> bool:
+        return to_string() == WILDCARD_SYMBOL
+
     static func from_string(topic : String) -> Topic:
         return Topic.new(topic)
 
@@ -231,7 +235,7 @@ class Callback:
     var _callback : String
 
     func _init(callback : String) -> void:
-        if not callback.is_valid_identifier() and not is_empty():
+        if not is_valid(callback):
             if IS_CONSOLE_DEBUGGING_ENABLED:
                 printerr(ERROR_INVALID_CALLBACK_NAME + " Callback: " + callback)
             return
@@ -246,8 +250,14 @@ class Callback:
     func is_empty() -> bool:
         return _callback.length() == 0
 
+    func is_valid(callback : Callback) -> bool:
+        return callback.is_valid_identifier() and not is_empty()
+
     static func from_string(callback : String) -> Callback:
         return Callback.new(callback)
+
+    static func from_topic(topic : Topic) -> Callback
+        return "_on_" + topic.to_string()
 
 
 class Subscriber:
