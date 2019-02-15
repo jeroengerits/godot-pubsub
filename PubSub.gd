@@ -119,6 +119,7 @@ func _remove_subscribtion(subscription : Subscription) -> void:
     for s in _subscriptions:
         if s.is_equal(subscription):
             _subscriptions.erase(s)
+            s.free()
 
 
 class Message:
@@ -267,14 +268,14 @@ class Subscriber:
     func _init(subscriber : Object) -> void:
         _instance = subscriber
 
-    func can_handle(callback : Callback) -> bool:
-        return _instance.has_method(callback.to_string())
+    func handle(callback: Callback, message : Message) -> void:
+        _instance.call(callback.to_string(), message.to_dict())
 
     func handle_deferred(callback : Callback, message : Message) -> void:
         _instance.call_deferred(callback.to_string(), message.to_dict())
 
-    func handle(callback: Callback, message : Message) -> void:
-        _instance.call(callback.to_string(), message.to_dict())
+    func can_handle(callback : Callback) -> bool:
+        return _instance.has_method(callback.to_string())
 
     static func from_native(subscriber : Object) -> Subscriber:
         return Subscriber.new(subscriber)
